@@ -1,0 +1,62 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+{% import "formmacro.html" as macros %}
+{{ macros.save_message(save_message) }}
+{{ macros.spacer() }}
+<h1 class="display-5">Currently playing</h1>
+
+{{ macros.currently_playing(playinfo) }}
+
+{{ macros.spacer() }}
+
+<h1 class="display-5">Add Radio Channel</h1>
+
+<div class="card">
+    {% if channelform %}
+    <form name="addchannel" id="addchannel" method="post" action="">
+        {{ macros.render_channel(channelform) }}
+    </form>
+    {% endif %}
+</div>
+
+{{ macros.spacer() }}
+
+<h1 class="display-5">Manage Channels</h1>
+
+{% if remove_channelform %}
+{% for remove_channel in remove_channelform.list %}
+{{ macros.render_remove_channel(remove_channel) }}
+{% endfor %}
+{% endif %}
+{{ macros.spacer() }}
+
+<h1 class="display-5">Last.fm connection</h1>
+
+<div class="card">
+    {% if lastfm_form %}
+    <form name="lastfm" id="lastfm" method="post" action="">
+        {{ macros.render_lastfm(lastfm_form) }}
+    </form>
+    {% endif %}
+</div>
+{{ macros.spacer() }}
+
+<div>
+    <div class="mainbutton">
+        {{ macros.clear_button() }}
+    </div>
+    <div class="mainbutton">
+        {{ macros.save_button() }}
+    </div>
+</div>
+
+{{ macros.spacer() }}
+{{ macros.spacer() }}
+<h3>Radio Logfile</h3>
+<div class="card">
+    {{ macros.errorlog(logdata) }}
+</div>
+<!-- End of StatCounter Code for Default Guide -->
+{% endblock %}

@@ -1,0 +1,55 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} Universum Internet Radio</title>
+    <link rel="stylesheet" href="/static/content/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="/static/content/site.css" />
+    <script src="/static/scripts/modernizr-2.6.2.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/scripts/jquery-ui.min.css">
+    <link rel="stylesheet" type="text/css" href="/static/content/dd.css">
+	<script src="/static/scripts/jquery-1.10.2.min.js"></script>
+	<script src="/static/scripts/jquery-ui.min.js"></script>
+    <script src="/static/scripts/jquery.dd.min.js"></script>
+	<script>
+	$(function() {
+		$( ".dtpick" ).datepicker();
+	});
+	$(document).ready(function(e) {
+    try {
+        $("body select").msDropDown();
+    } catch(e) {
+        alert(e.message);
+    }
+    });
+    {% if set_tab %}
+       $(function(){ window.location.hash = {{ set_tab }}; });
+    {%endif%}
+	</script>
+    <link rel="icon" href="static/images/favicon.ico" />
+    {{ fontawesome_html() }}
+</head>
+
+<body>
+ {% import "formmacro.html" as macros %}
+
+    {{ macros.navbar() }}
+    <div class="container body-content">
+        {% block content %}
+        {% endblock %}
+        {{ macros.spacer() }}
+        <hr />
+        <footer>
+            <p>&copy; {{ year }} - Universum radio control by Sebastian
+                Wolf</p>
+        </footer>
+    </div>
+
+    <script src="/static/scripts/bootstrap.js"></script>
+    <script src="/static/scripts/respond.js"></script>
+    {% block scripts %}
+    {% endblock %}
+
+</body>
+</html>

@@ -1,0 +1,189 @@
+{% macro render_field(field) %}
+<div class="form-group">
+<label>{{ field.label }}</label>
+{% if field.errors %}
+{{ field(class_="form-control is-invalid")|safe }}
+    {% else %}
+    {{ field(class_="form-control")|safe }}
+    {% endif %}
+    {% if field.errors %}
+        {% for error in field.errors %}
+        <div class="invalid-feedback">{{ error }}</div>
+        {% endfor %}
+    {% endif %}
+</div>
+{% endmacro %}
+
+{% macro render_channel(channelform) %}
+{{ channelform.hidden_tag() }}
+<div class="row">
+    <div class="col-md-10">
+        <div class="form-row">
+            <div class="col-md-4 mb-4">
+                {{render_field(channelform.channel_name)}}
+            </div>
+            <div class="col-md-8 mb-8">
+                {{render_field(channelform.stream_url)}}
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="col-md-4 mb-4">
+            </div>
+            <div class="col-md-8 mb-8">
+                {{render_field(channelform.online_radio_box)}}
+            </div>
+        </div>
+</div>
+    <div class="col-md-2 formbutton">
+        <button type="submit" class="btn btn-default btn-circle btn-xl btn-dark"><i class="fas fa-plus"></i>
+        </button>
+
+    </div>
+</div>
+{% endmacro %}
+
+
+{% macro render_remove_channel(channelform) %}
+<div class="card">
+    <form name="test" method="post" action="">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <div class="row">
+            <div class="col-md-10">
+                <div class="form-row">
+                    <div class="col-md-4 mb-4">
+                        <input class="form-control" disabled="" value="{{channelform.channel_name}}" name="channel_name" type="text">
+                    </div>
+                    <div class="col-md-8 mb-8">
+                        <input class="form-control" disabled="" value="{{channelform.stream_url}}" name="stream_url" type="text">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="col-md-4 mb-4">
+                    </div>
+                    <div class="col-md-8 mb-8">
+                        <input class="form-control" disabled="" value="{{channelform.online_radio_box}}" name="online_radio_box" type="text">
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 formbutton">
+                <input type="hidden" name="removechannel" value="{{channelform.id}}">
+                <button type="submit" class="btn btn-default btn-circle btn-xl btn-dark"><i class="fas fa-minus"></i>
+                </button>
+
+            </div>
+        </div>
+    </form>
+</div>
+{% endmacro %}
+
+{% macro save_button() %}
+<form name="test" method="post" action="">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <input type="hidden" value="save" name="save">
+    <button type="submit" class="btn btn-dark btn-lg">Save Settings</button>
+</form>
+{% endmacro %}
+
+{% macro clear_button() %}
+<form name="test" method="post" action="">
+
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <input type="hidden" value="clear" name="clear">
+    <button type="submit" class="btn btn-warning btn-lg">Reload Settings</button>
+</form>
+{% endmacro %}
+
+{% macro navbar() %}
+<nav class="navbar navbar-light navbarbg sticky-top">
+  <span class="navbar-brand mb-0 h1">Universum Internet Radio</span>
+</nav>
+{% endmacro %}
+
+{% macro spacer() %}
+<div class="p-3" style="min-width: 1px">
+</div>
+{% endmacro %}
+
+{% macro render_lastfm(form) %}
+{{ form.hidden_tag() }}
+<div class="row">
+    <div class="col-md-10">
+        <div class="form-row">
+            <div class="col-md-4 mb-4">
+                {{render_field(form.user)}}
+            </div>
+            <div class="col-md-8 mb-8">
+                {{render_field(form.api)}}
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="col-md-4 mb-4">
+                {{render_field(form.password)}}
+            </div>
+            <div class="col-md-8 mb-8">
+                {{render_field(form.api_secret)}}
+            </div>
+        </div>
+</div>
+    <div class="col-md-2 formbutton">
+        <button type="submit" class="btn btn-circle btn-xl btn-default btn-dark"><i class="fas fa-save"></i>
+        </button>
+
+    </div>
+</div>
+{% endmacro %}
+
+{% macro currently_playing(info) %}
+
+<form name="Currently Playing" method="post" action="">
+
+    <div class="row">
+        <div class="col-md-1">
+            <b>Radio:</b>
+        </div>
+        <div class="col-md-3">
+            {{info.radio}}
+        </div>
+        <div class="col-md-1">
+            <b>ChannelID</b>
+        </div>
+        <div class="col-md-3">
+            {{info.id}}
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-1">
+            <b>Song:</b>
+        </div>
+        <div class="col-md-3">
+            {{info.song}}
+        </div>
+        <div class="col-md-1"><b>Refresh:</b></div>
+        <div class="col-md-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <input type="hidden" value="refresh" name="refresh">
+    <button type="submit" class="btn btn-warning btn-circle btn btn-lg"><i class="fas fa-sync-alt"></i></button>
+        </div>
+    </div>
+
+
+</form>
+{% endmacro %}
+
+{% macro save_message(save_message) %}
+    {% if save_message %}
+<div class="p-3" style="background-color:yellow">
+    <h2>Please click "Save Settings" to make changes effective.</h2>
+</div>
+{% endif %}
+{% endmacro %}
+
+{% macro errorlog(logdata) %}
+<div class="row">
+    <div class="col-md-10">
+        <pre>
+            {{ logdata }}
+        </pre>
+    </div>
+</div>
+{% endmacro %}
