@@ -428,5 +428,5 @@ def home():
         lastfm_form=lastfm_form,
         playinfo=currently_playing,
         save_message=save_message,
-        error_log_data=error_log_data
+        logdata=error_log_data
     )
