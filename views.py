@@ -11,15 +11,18 @@ Views:
     a refresh button to check if a new song is playing
 
     2. **Radio Channels**: shows an input field to add a radio
-    channel, and for each channel already in a deactivated
+    channel. Additionally, for each channel already inside the
+    backend show a deactivated
     input field where the channel can be removed
 
     3. **Last.fm**: This view can be used to setup the last.fm
     connection settings for the radio to scrobble all songs
     playing to last.fm
 
-    2/3. **Reload/Save**: The settings are written to disk. With
+    2/3. **Reload/Save**: With
     the reload and save buttons the disk interaction is triggered.
+    The settings are written to disk at Save. The settings are restored
+    from Disk at Reload.
     Additionally, the save button restarts the radio itself
 
     4. **Error Log**: The error log of the current session gets

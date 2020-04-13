@@ -1,4 +1,13 @@
 """
+Python Radio control for Universum Python Radio
+
+Please find the following external controls in these classes:
+
+ChannelSwitch: KY040
+Volume: VolumeControl
+LED: Blinker
+SoundPlayer: Player
+
 KY040 Python Class
 Martin O'Hanlon
 stuffaboutcode.com
@@ -26,11 +35,19 @@ from pylast import NetworkError, WSError, MalformedResponseError
 import calendar
 from pytz import timezone
 
+
 class LastFMRadioScrobble():
     """ A class to derive basic connectivities with
     the last.fm API
     On init it connects to the last.fm API with a session key
     Without a session key it will cause a WSError
+
+    Attributes:
+        network: `pylast.LastFMNetwork` connection
+        error: `string` to describe the errors
+
+    :param network:  `pylast.LastFMNetwork` connection
+    :param doc: Dictionary containing `api`, `api_secret`, `user`, `password` to connect with last.fm API
     """
 
     def __init__(self, network=None, doc=None):
@@ -46,51 +63,26 @@ class LastFMRadioScrobble():
         else:
             self.network = network
 
-    def derive_track_dict(self, station):
-        if self.network is not None:
-            try:
-                lastfm_user = self.network.get_user(station)
-                tracklist = lastfm_user.get_recent_tracks(
-                    time_from=(calendar.timegm(datetime.datetime.now().utctimetuple()) - 12000),
-                    time_to=calendar.timegm(datetime.datetime.now().utctimetuple()) - 3600,
-                    limit=3)
-                try:
-                    if len(tracklist) > 0:
-                        for i, track in enumerate(tracklist):
-                            song_tuples = [(i, " - ".join([track.track.artist.name,
-                                                           track.track.title]))
-                                           for i, track in enumerate(tracklist)]
-
-                            songlist_form_hidden_data = [{"title": track.track.title,
-                                                          "artist": track.track.artist.name,
-                                                          "timestamp": track.timestamp}
-                                                         for track in tracklist]
-                    else:
-                        song_tuples = []
-                        songlist_form_hidden_data = ""
-                        self.error = "LastFM Scrobble Problem: No Song found"
-
-                except NetworkError as e:
-                    song_tuples = [(1, "testsong"),
-                                   (2, "testsong2")]
-
-                    songlist_form_hidden_data = ""
-                    self.error = "LastFM Connection: " + str(e)
-                return songlist_form_hidden_data
-
-            except MalformedResponseError as e:
-                self.error = "LastFM Error: " + e
-                return False
-
-
-    def scrobble_from_json(self, in_dict=[], indeces=list(), has_timestamp=True):
+    def scrobble_from_json(self, in_dict=None, indeces=None, has_timestamp=True):
         """From a json of Songs and a list of indeces scrobble songs to the last.fm API
+
         This uses pylast.scrobble_many to simply scrobbe a list of songs from a jsonstring
         that contains these songs and a list of indeces which songs to take from that list
-        :param jsonstring: A json put into a string. the json was compiled by :func:`songlist_form_hidden_data
+
+        :param jsonstring: A json put into a string. the json was compiled by a Songgetter.get_tracklist function
+
         :param indeces: A list of integers telling which elements to take from the songlist and scrobble them
+
         :return: The list of songs as "Artist - Title - Timestamp" to be displayed in the app
         """
+        if in_dict is None:
+            in_dict = [{
+                "artist": "No Artist",
+                "title": "No Title"
+            }]
+        if indeces is None:
+            indeces = list()
+
         if self.network is not None:
             data_list = in_dict
 
@@ -107,7 +99,7 @@ class LastFMRadioScrobble():
             else:
                 tracklist = [{"title": data_list[index]["title"],
                               "artist": data_list[index]["artist"],
-                              "timestamp": datetime.now()}
+                              "timestamp": datetime.datetime.now()}
                              for index in indeces]
             try:
                 self.network.scrobble_many(tracks=tracklist)
@@ -135,13 +127,28 @@ class LastFMRadioScrobble():
 
 
 class CurrentChannel:
-    def __init__(self, radio=None, song=None, id = 1, json_file = ''):
+    """Class for currently playing channel
+
+    Attributes:
+        id: `string` describing the channel ID
+        radio: `string` giving the radio channel name
+        song: `string` describing the currently playing song
+        json_file: `string` where to dump this information to
+
+    """
+
+    def __init__(self, radio=None, song=None, id=1, json_file=''):
         self.id = id
         self.radio = radio
         self.song = song
         self.json_file = json_file
 
     def write_json(self):
+        """ Dump the information to drive
+
+        Returns: nth
+
+        """
         with open(self.json_file, 'w') as f:
             json.dump({
                 'id': self.id,
@@ -150,17 +157,49 @@ class CurrentChannel:
             }, f)
 
     def set_song(self, song):
+        """ Setter for `song` attribute
+
+        Args:
+            song: `string` describing the currently playing song
+
+        Returns:
+
+        """
         self.song = song
 
 
 class SongGetter:
+    """Class to handle songs from channels
+
+    Attributes:
+        url: OnlineRadioBox Url to find out which song is playing - needs to be of type playlist
+        stationname: Any `String` describing the name of the currently playing radio station. This
+          will only be used in case no song was detected.
+        tracklist: Array of tracks derived from OnlineRadioBox
+        error: Any kind of error should be stored as a `string`
+
+    """
+
     def __init__(self, url="", stationname="none"):
         self.url = url
         self.stationname = stationname
         self.tracklist = []
         self.error = None
 
-    def get_secret_djam(self):
+    def get_tracklist(self):
+        """ Derive tracklist from URL
+
+        This function gets the HTML content of the OnlineRadioBox URL and crawls it
+        for the currently playing song. The song will be handed over to an
+        array with one dict element.
+
+        The array gets stored into `self.tracklist`. There the dictionary needs to contain
+        `title`, `artist`, `timestamp` where the timestamp is given as
+        `((datetime.datetime.now()) - datetime.datetime(1970, 1, 1)).total_seconds()`
+
+        Returns:
+
+        """
         self.error = None
         now = (datetime.datetime.now()) - datetime.datetime(1970, 1, 1)
 
@@ -196,7 +235,29 @@ class SongGetter:
 
 
 class ChannelWriter:
-    def __init__(self, channel_dict = None, last_fm_doc=None, logfile="", current_channel_json = ''):
+    """Log class for current channel
+
+    This class upon being started will check the last song for the current channel
+    by the SongGetter class
+    The song gets written into the `current_channel_json`
+    If a song was received, it will get scrobbled to last.fm.
+    In case of any error during this process, the error will be written into the `logfile`
+
+    Attributes:
+        channel_dict: Dictionary of current channel containing the `onlineradiobox` attribute to
+           receive the song
+        last_fm_doc: Dictionary with the fields 'api', 'api_secret', 'user', 'password'
+        _running: True/False whether this is started already and checks for new song every 15 sec
+        logfile: .txt file to log errors
+        song: string containg the last played song
+        sleep_count: Check if 15 sec are over
+        last_fm_scrobbler: LastFMRadioScrobble object - scrobble song
+        songgetter: SongGetter object - receive song
+        channel: CurrentChannel object - write song to disk
+        current_channel_json: `json` file on disk to store current channel
+    """
+
+    def __init__(self, channel_dict=None, last_fm_doc=None, logfile="", current_channel_json=''):
         if last_fm_doc is None:
             last_fm_doc = {}
         self.channel_dict = channel_dict
@@ -211,6 +272,14 @@ class ChannelWriter:
         self.current_channel_json = current_channel_json
 
     def start(self):
+        """
+        Run a loop to update channel info and scrobble songs
+
+        Returns: A While loop that tries every 20 seconds to derive the currently playing song. If there
+        is a song, the song will be sent to last.fm. In case the channel was changed by the user, the
+        information will be updated in the `self.channel` item.
+
+        """
         self.last_fm_scrobbler = LastFMRadioScrobble(doc=self.last_fm_doc)
         self.songgetter = SongGetter(url=self.channel_dict['onlineradiobox'],
                                      stationname=self.channel_dict['name'])
@@ -218,7 +287,7 @@ class ChannelWriter:
             radio=self.channel_dict['name'],
             id=self.channel_dict['id'],
             song="",
-            json_file = self.current_channel_json
+            json_file=self.current_channel_json
         )
         self.channel.write_json()
         while self._running:
@@ -240,12 +309,24 @@ class ChannelWriter:
         self._running = False
 
     def scrobble(self):
-        self.songgetter.get_secret_djam()
+        """
+        Scrobble the song using a LastFMRadioScrobble class
+
+        this function derives the current song from the Songgetter. `self.songgetter`
+        Afterwards, it tries to scrobble this song to last.fm using a LastFMRadioScrobble class item
+        that is stored in `self.last_fm_scrobbler`.
+
+        Returns: In case of a successful scrobble it prints the song into the console. Else it writes
+        whatever error occured into the `self.errorlog`
+
+        """
+        self.songgetter.get_tracklist()
         if self.songgetter.error is None:
             if self.songgetter.tracklist[0]["title"] != self.song and self.songgetter.tracklist[0]["title"] != "try":
                 self.song = self.songgetter.tracklist[0]["title"]
                 try:
-                    song_playing = self.songgetter.tracklist[0]["artist"] + ' - ' + self.songgetter.tracklist[0]["title"]
+                    song_playing = self.songgetter.tracklist[0]["artist"] + ' - ' + self.songgetter.tracklist[0][
+                        "title"]
                     self.channel.set_song(song_playing)
                 except TypeError as e:
                     with open(self.logfile, 'a') as f:
@@ -255,8 +336,8 @@ class ChannelWriter:
                         f.write("\n")
 
                 scrobble_info = self.last_fm_scrobbler.scrobble_from_json(in_dict=self.songgetter.tracklist,
-                                                          indeces=[0],
-                                                          has_timestamp=True)
+                                                                          indeces=[0],
+                                                                          has_timestamp=True)
 
                 if self.last_fm_scrobbler.has_error():
                     with open(self.logfile, 'a') as f:
@@ -271,7 +352,26 @@ class ChannelWriter:
 
 
 class VolumeControl:
-    def __init__(self, last_read = 0, tolerance = 250):
+    """Potentionmeter controller
+
+    Tutorial found at:
+      https://learn.adafruit.com/reading-a-analog-in-and-controlling-audio-volume-with-the-raspberry-pi?view=all
+
+    This class takes a SCK-MISO-MOSI controller from adafruit to digitalize a potentionmeter via a MCP3008 chip
+
+    The setup was performed excalty as written in the tutorial, except the 3.3v and GRND pins
+
+    Instead of controlling the volume directly, alsa-mixer is used
+
+    Attributes:
+        _running: Whether loop is started
+        last_read: Last read value
+        tolerance: to keep from being jittery we'll only change
+        mcp: MCP3008 controller
+        chan0: Analog Converter
+    """
+
+    def __init__(self, last_read=0, tolerance=250):
         self._running = False
         self.last_read = last_read  # this keeps track of the last potentiometer value
         self.tolerance = 250  # to keep from being jittery we'll only change
@@ -286,10 +386,18 @@ class VolumeControl:
         # create an analog input channel on pin 0
         self.chan0 = AnalogIn(self.mcp, MCP.P0)
 
-
     def remap_range(self, value, left_min, left_max, right_min, right_max):
-        # this remaps a value from original (left) range to new (right) range
-        # Figure out how 'wide' each range is
+        """
+        this remaps a value from original (left) range to new (right) range
+        Figure out how 'wide' each range is
+
+        :param value: input val
+        :param left_min: old min
+        :param left_max: old max
+        :param right_min: new min
+        :param right_max: new max
+        :return:
+        """
         left_span = left_max - left_min
         right_span = right_max - right_min
 
@@ -300,6 +408,13 @@ class VolumeControl:
         return int(right_min + (valueScaled * right_span))
 
     def start(self):
+        """set volume
+
+        controls the `sudo amixer sset "Digital" {volume}% > /dev/null'` command
+        and sets the volume to the SCP reader's current value
+
+        :return:
+        """
         while self._running:
             # we'll assume that the pot didn't move
             trim_pot_changed = False
@@ -324,7 +439,7 @@ class VolumeControl:
                 os.system(set_vol_cmd)
 
                 # save the potentiometer reading for the next loop
-                last_read = trim_pot
+                self.last_read = trim_pot
             sleep(0.025)
 
     def is_running(self):
@@ -338,6 +453,21 @@ class VolumeControl:
 
 
 class Player:
+    """Play MP3s
+
+    This class hosts a `process` that runs `omxplayer` with the
+    desired .mp3 file upon start.
+
+    On stop it will kill the process
+
+    Attributes:
+        process: subprocess.Popen process object
+        mp3: string with the link of the mp3
+        _running: True/False whether it was started
+        errorlog: .txt file to write any occuring errors to
+
+    """
+
     def __init__(self, mp3, errorlog="/tmp/log.txt"):
         self.process = None
         self.mp3 = mp3
@@ -351,13 +481,20 @@ class Player:
         except Exception as e:
             print('Player not started')
             with open(self.errorlog, 'a') as f:
+                f.write('Player Start Error: ' + self.mp3)
                 f.write(str(e))
                 f.write("\n")
 
     def stop(self):
+        """Kill current player
+
+        :return:
+        """
         try:
             os.killpg(self.process.pid, signal.SIGTERM)
         except:
+            with open(self.errorlog, 'a') as f:
+                f.write('Player Stop Error: ' + self.mp3)
             print("Killing of a Player not succesful")
         self._running = False
 
@@ -369,6 +506,11 @@ class Player:
 
 
 class NoisePlayer(Player):
+    """Player attached to fixed MP3
+
+    Uses `01-White-Noise-10min` or `03-White-Noise-10min` from directory
+    `/home/pi/share/radioflask/` to play noise in between channels
+    """
 
     def __init__(self):
         noise = random.randrange(1, 3, 2)
@@ -391,6 +533,7 @@ class Blinker:
             t1: Thread for the NoisePlayer
             _running: whether the start was activated
     """
+
     def __init__(self, ledpin):
         self.ledpin = ledpin
         GPIO.setup(ledpin, GPIO.OUT)
@@ -438,6 +581,38 @@ class Blinker:
 
 
 class KY040:
+    """Rotary switch and Radio Management class
+
+    Attributes:
+        lastfm_dict: Dictionary with the fields 'api', 'api_secret', 'user', 'password'
+        clockPin: GPIO number of clk pin of the Rotary switch
+        dataPin: GPIO number of the dt pin of the Rotary switch
+        switchPin: GPIO number of the switch of the Rotary switch
+        ledpin: GPIO number of the LED
+
+        rotaryCallback: Function to handle messages upon pin change
+        switchCallback: Function to handle button press
+        errorlog: file location of a `txt` file containing the error log
+        current_channel_json: location of a `json` file containing the current channel and song
+
+        absolute: Position of the Rotary switch (not exakt, just relative)
+        channels: list/array of positions where channels can be located
+        channel_dicts: array of channel dictionaries
+
+        led: Blinker object
+        t1: threading.Thread object to handle the led
+
+        radio: A Player object that should run the current radio channel contained in
+          `self.channel_dicts[self.absolute]['stream']`
+        t2: threading.Thread object to handle the `start` method of the radio
+
+        volume: A VolumeControl object
+        t_volumne: A threading.Thread object where the Volume controller can run in parallel
+
+        channel_writer: A ChannelWriter object to write current channel infos to disk
+        t_writer: A threading.Thread object to handle the start of the channel_writer
+
+    """
     CLOCKWISE = 0
     ANTICLOCKWISE = 1
     DEBOUNCE = 200
@@ -452,7 +627,9 @@ class KY040:
         nowtime = str(datetime.datetime.now().today().isoformat())
         try:
             os.rename(errorlog, errorlog.replace("errorlog",
-                                                 "old_errorlog" + nowtime[0:10] + "-" + nowtime[11:13] + nowtime[14:16]+ nowtime[17:19]))
+                                                 "old_errorlog" + nowtime[0:10] + "-" + nowtime[11:13] + nowtime[
+                                                                                                         14:16] + nowtime[
+                                                                                                                  17:19]))
         except:
             print("no new errorlog")
         with open(errorlog, "w") as f:
@@ -658,6 +835,7 @@ class KyoRadio:
         ky040: Upon start will be filled with a KY040 class object
 
     """
+
     def __init__(self):
         print('Program start.')
 
@@ -670,16 +848,17 @@ class KyoRadio:
         GPIO.setmode(GPIO.BCM)
         self._running = False
 
-    def start(self, channeldict = '/home/share/radioflask/static/tests/channellist.json',
-                 errorlog = "/home/pi/share/radioflask/static/tests/errorlog.txt",
-              lastfm_json = "/home/pi/share/radioflask/static/tests/lastfm.json",
+    def start(self,
+              channeldict='/home/share/radioflask/static/tests/channellist.json',
+              errorlog="/home/pi/share/radioflask/static/tests/errorlog.txt",
+              lastfm_json="/home/pi/share/radioflask/static/tests/lastfm.json",
               current_channel_json="/home/pi/share/radioflask/static/tests/current.json"
               ):
         """
 
         :param channeldict: Location of the channels to run in the radio as a json file
         :param errorlog: location of a txt file to store the error log in
-        :param lastfm_json: location of the lasf.fm connection API / PASSWORD / USER
+        :param lastfm_json: location of the last.fm connection API / API_SECRET / PASSWORD(MD5) / USER
         :param current_channel_json: Location where the currently playing channel should be written
         """
         def rotaryChange(direction):
@@ -696,7 +875,7 @@ class KyoRadio:
 
         # Start a KYO40 Rotary Switch controlled radio
         self.ky040 = KY040(self.CLOCKPIN, self.DATAPIN, self.SWITCHPIN, self.LEDPIN, rotaryChange, switchPressed,
-                           channeldict, errorlog, lastfm_dict, current_channel_json = current_channel_json
+                           channeldict, errorlog, lastfm_dict, current_channel_json=current_channel_json
                            )
         self.t1 = threading.Thread(target=self.ky040.start)
         print('Launch switch monitor class.')
@@ -708,10 +887,11 @@ class KyoRadio:
         self.t1.join()
         self._running = False
 
+
 # test the radio for 10 seconds
 if __name__ == "__main__":
-     x = KyoRadio()
-     x.start()
-     sleep(10)
-     x.stop()
-     exit()
+    x = KyoRadio()
+    x.start()
+    sleep(10)
+    x.stop()
+    exit()
